@@ -27,6 +27,7 @@ const MODES = {
 function App() {
   const [mode, setMode] = useState("focus");
   const [secondsLeft, setSecondsLeft] = useState(MODES.focus.minutes * 60);
+  const [endTime, setEndTime] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [focusSessionsCompleted, setFocusSessionsCompleted] = useState(0);
 
@@ -38,17 +39,21 @@ function App() {
   }, [mode, modeConfig.minutes]);
 
   useEffect(() => {
-    if (!isRunning) {
-      return;
-    }
-    intervalRef.current = setInterval(() => {
-      setSecondsLeft((prev) => prev - 1);
-    }, 1000);
-    return () => {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    };
-  }, [isRunning]);
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      const remaining = Math.round((endTime - Date.now()) / 1000);
+
+      if (remaining <= 0) {
+        setSecondsLeft(0);
+        setIsRunning(false);
+      } else {
+        setSecondsLeft(remaining);
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [isRunning, endTime]);
+
   useEffect(() => {
     if (!isRunning) {
       return;
@@ -89,19 +94,22 @@ function App() {
 
   function start() {
     if (secondsLeft <= 0) return;
+
     setIsRunning(true);
+    setEndTime(Date.now() + secondsLeft * 1000);
   }
   function pause() {
     setIsRunning(false);
   }
   function reset() {
     setIsRunning(false);
+    setEndTime(null);
     setSecondsLeft(modeConfig.minutes * 60);
   }
   function setModeManually(nextMode) {
     setIsRunning(false);
+    setEndTime(null);
     setMode(nextMode);
-    setSecondsLeft(MODES[nextMode].minutes * 60);
   }
   return (
     <div className="page">
